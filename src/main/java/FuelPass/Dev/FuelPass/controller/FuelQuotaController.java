@@ -1,6 +1,7 @@
 package FuelPass.Dev.FuelPass.controller;
 
 import FuelPass.Dev.FuelPass.dto.FuelQuotaRequest;
+import FuelPass.Dev.FuelPass.dto.ReduceQuotaReq;
 import FuelPass.Dev.FuelPass.service.FuelQuotaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,4 +19,12 @@ public class FuelQuotaController {
         fuelQuotaService.addFuelQuota(fuelQuotaRequest);
         return "Fuel Quota Added Successfully !";
     }
+
+    @PutMapping
+    @ResponseStatus(HttpStatus.OK)
+    public String reduceQuota(@RequestBody ReduceQuotaReq reduceQuotaReq){
+        fuelQuotaService.reduceQuota(reduceQuotaReq);
+        return "Fuel Quota Reduced !";
+    }
 }
+
