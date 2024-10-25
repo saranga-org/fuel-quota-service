@@ -1,6 +1,6 @@
 package FuelPass.Dev.FuelPass.dto;
 
-public record FuelQuotaRequest(Long id, String vehicleNumber, String vehicleType, String fuelType, String qrCode, Integer quota) {
+public record FuelQuotaRequest(String vehicleNumber, String vehicleType, String fuelType, Integer quota,String contactNo) {
 }
 
 

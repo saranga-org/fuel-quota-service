@@ -1,9 +1,12 @@
 package FuelPass.Dev.FuelPass.service;
 
 import FuelPass.Dev.FuelPass.dto.FuelQuotaRequest;
+import FuelPass.Dev.FuelPass.dto.GetBalanceRequest;
+import FuelPass.Dev.FuelPass.dto.GetBalanceResponce;
 import FuelPass.Dev.FuelPass.dto.ReduceQuotaReq;
 import FuelPass.Dev.FuelPass.model.FuelQuota;
 import FuelPass.Dev.FuelPass.repository.FuelQuotaRepository;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -19,35 +22,42 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class FuelQuotaService {
 
     private final FuelQuotaRepository fuelQuotaRepository;
-    @Autowired
+
     private RestTemplate restTemplate;
 
-    public void addFuelQuota(FuelQuotaRequest fuelQuotaRequest){
+    private QRGenerationService qrGenerationService;
 
-        // Map vehicle request to vehicle object
+    public String addFuelQuota(FuelQuotaRequest fuelQuotaRequest) {
         FuelQuota fuelQuota = new FuelQuota();
-
         fuelQuota.setVehicleNumber(fuelQuotaRequest.vehicleNumber());
         fuelQuota.setVehicleType(fuelQuotaRequest.vehicleType());
         fuelQuota.setFuelType(fuelQuotaRequest.fuelType());
-        fuelQuota.setQrCode(fuelQuotaRequest.qrCode());
+
+        // Generate and set the QR code
+        String generatedQrCode = qrGenerationService.generateCombinedKey(fuelQuotaRequest.vehicleNumber());
+        fuelQuota.setQrCode(generatedQrCode);
+
         fuelQuota.setQuota(fuelQuotaRequest.quota());
+        fuelQuota.setContactNo(fuelQuotaRequest.contactNo());
 
-        // Save vehicle ot FuelPass Repository
-
+        // Save to database
         fuelQuotaRepository.save(fuelQuota);
 
-        String message = "An amount of " + fuelQuotaRequest.quota() + " liters is added to your quota";
+        // Send notification
+        String message = "Your vehicle " + fuelQuotaRequest.vehicleNumber() +
+                " has registered successfully. You have " + fuelQuotaRequest.quota() +
+                " liters of " + fuelQuotaRequest.fuelType() + " per week.";
+        sendNotificationAsync(fuelQuotaRequest.contactNo(), message);
 
-        sendNotificationAsync("+94788762785",message);
+        return generatedQrCode;
     }
 
     public void reduceQuota(ReduceQuotaReq reduceQuotaReq){
-        Optional<FuelQuota> fuelQuotaOptional = fuelQuotaRepository.findByVehicleNumber(reduceQuotaReq.vehicleNumber());
+        Optional<FuelQuota> fuelQuotaOptional = fuelQuotaRepository.findByQrCode(reduceQuotaReq.qrCode());
 
         if(fuelQuotaOptional.isPresent()){
             FuelQuota fuelQuota = fuelQuotaOptional.get();
@@ -59,11 +69,44 @@ public class FuelQuotaService {
             fuelQuotaRepository.save(fuelQuota);
 
             String message = "An amount of " + reduceQuotaReq.quota() + " liters is reduced from your quota";
-            sendNotificationAsync("+94788762785",message);
+            sendNotificationAsync(fuelQuota.getContactNo(), message);
         } else {
-            throw new RuntimeException("Vehicle with number " + reduceQuotaReq.vehicleNumber() + " not found !");
+            throw new RuntimeException("Vehicle not found !");
         }
     }
+
+    public GetBalanceResponce getBalance(GetBalanceRequest getBalanceRequest) {
+        Optional<FuelQuota> fuelQuotaOptional = fuelQuotaRepository.findByQrCode(getBalanceRequest.qrCode());
+
+        if (fuelQuotaOptional.isPresent()) {
+            FuelQuota fuelQuota = fuelQuotaOptional.get();
+
+            String vehicleNo = fuelQuota.getVehicleNumber();
+            String remainingQuota = String.valueOf(fuelQuota.getQuota());
+
+
+            return new GetBalanceResponce(vehicleNo, remainingQuota);
+        }
+        throw new RuntimeException("Fuel vehicle not found for the given QR code");
+    }
+
+
+    public String resetQrCode(String vehicleNo) {
+        String newQrCode = qrGenerationService.generateCombinedKey(vehicleNo);
+
+        Optional<FuelQuota> fuelQuotaOptional = fuelQuotaRepository.findByVehicleNumber(vehicleNo);
+        if (fuelQuotaOptional.isPresent()) {
+            FuelQuota fuelQuota = fuelQuotaOptional.get();
+            fuelQuota.setQrCode(newQrCode);
+
+            fuelQuotaRepository.save(fuelQuota);
+            return newQrCode;
+        } else {
+            throw new RuntimeException("Fuel quota not found for vehicle number: " + vehicleNo);
+        }
+    }
+
+
 
     @Scheduled(cron = "0 0 0 * * SUN")
     public void resetQuota(){

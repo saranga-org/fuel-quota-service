@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface FuelQuotaRepository extends JpaRepository<FuelQuota, Long> {
     Optional<FuelQuota> findByVehicleNumber(String vehicleNumber);
+    Optional<FuelQuota> findByQrCode(String qrCode);
 }

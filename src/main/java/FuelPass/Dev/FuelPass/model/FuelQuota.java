@@ -21,4 +21,5 @@ public class FuelQuota {
     private String fuelType;
     private String qrCode;
     private Integer quota;
+    private String contactNo;
 }
