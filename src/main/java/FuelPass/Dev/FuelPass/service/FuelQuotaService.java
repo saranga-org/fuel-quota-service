@@ -57,7 +57,7 @@ public class FuelQuotaService {
     }
 
     public void reduceQuota(ReduceQuotaReq reduceQuotaReq){
-        Optional<FuelQuota> fuelQuotaOptional = fuelQuotaRepository.findByQrCode(reduceQuotaReq.qrCode());
+        Optional<FuelQuota> fuelQuotaOptional = fuelQuotaRepository.findByVehicleNumber(reduceQuotaReq.vehicleNo());
 
         if(fuelQuotaOptional.isPresent()){
             FuelQuota fuelQuota = fuelQuotaOptional.get();

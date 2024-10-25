@@ -32,7 +32,7 @@ public class FuelQuotaController {
     public ResponseEntity<String> reduceQuota(@RequestBody ReduceQuotaReq reduceQuotaReq) {
         try {
             fuelQuotaService.reduceQuota(reduceQuotaReq);
-            String message = "Fuel quota reduced by " + reduceQuotaReq.quota() + " liters for QR code " + reduceQuotaReq.qrCode();
+            String message = "Fuel quota reduced by " + reduceQuotaReq.quota() + " liters for Vehicle no " + reduceQuotaReq.vehicleNo();
             return ResponseEntity.ok(message);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
